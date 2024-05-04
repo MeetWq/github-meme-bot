@@ -10,6 +10,7 @@ from nonebot.adapters.github import (
     Bot,
     CommitCommentCreated,
     IssueCommentCreated,
+    Message,
     PullRequestReviewCommentCreated,
 )
 from nonebot.drivers import Request
@@ -35,7 +36,7 @@ def handler(meme: Meme) -> T_Handler:
             name: str
             avatar_url: str
 
-        msg = state[MSG_KEY]
+        msg: Message = state[MSG_KEY]
         texts: list[str] = []
         images: list[bytes] = []
         image_urls: list[str] = []
@@ -48,7 +49,7 @@ def handler(meme: Meme) -> T_Handler:
             sender.avatar_url,
         )
 
-        for text in shlex.split(msg):
+        for text in shlex.split(msg.extract_plain_text()):
             if text.startswith("@") and (name := text[1:]):
                 try:
                     user = await get_user(bot, name)
