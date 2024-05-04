@@ -17,7 +17,6 @@ from nonebot.drivers import Request
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.params import Depends
-from nonebot.rule import Rule
 from nonebot.typing import T_Handler, T_State
 
 from .rule import MSG_KEY, TEXTS_KEY, command_rule, regex_rule
@@ -125,13 +124,10 @@ def handler(meme: Meme) -> T_Handler:
     return handle
 
 
-async def check_rule(
+async def not_bot(
     event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
 ) -> bool:
-    if event.payload.sender.login.endswith(BOT_MARKER):
-        logger.info("评论来自机器人，已跳过")
-        return False
-    return True
+    return not event.payload.sender.login.endswith(BOT_MARKER)
 
 
 def create_matchers():
@@ -140,7 +136,8 @@ def create_matchers():
         if meme.keywords:
             matchers.append(
                 on_message(
-                    Rule(check_rule) & command_rule(meme.keywords),
+                    command_rule(meme.keywords),
+                    permission=not_bot,
                     block=False,
                     priority=1,
                 )
@@ -148,7 +145,8 @@ def create_matchers():
         if meme.patterns:
             matchers.append(
                 on_message(
-                    Rule(check_rule) & regex_rule(meme.patterns),
+                    regex_rule(meme.patterns),
+                    permission=not_bot,
                     block=False,
                     priority=2,
                 )
