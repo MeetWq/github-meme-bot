@@ -124,7 +124,7 @@ def handler(meme: Meme) -> T_Handler:
     return handle
 
 
-async def not_bot(
+def not_bot(
     event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
 ) -> bool:
     return not event.payload.sender.login.endswith(BOT_MARKER)
@@ -137,6 +137,7 @@ def create_matchers():
             matchers.append(
                 on_message(
                     command_rule(meme.keywords),
+                    permission=not_bot,
                     block=False,
                     priority=1,
                 )
@@ -145,6 +146,7 @@ def create_matchers():
             matchers.append(
                 on_message(
                     regex_rule(meme.patterns),
+                    permission=not_bot,
                     block=False,
                     priority=2,
                 )
