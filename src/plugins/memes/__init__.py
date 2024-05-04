@@ -20,13 +20,7 @@ from nonebot.params import Depends
 from nonebot.typing import T_Handler, T_State
 
 from .rule import MSG_KEY, TEXTS_KEY, command_rule, regex_rule
-from .utils import (
-    BOT_MARKER,
-    creation_reaction,
-    get_installation_id,
-    get_user,
-    upload_image,
-)
+from .utils import creation_reaction, get_installation_id, get_user, upload_image
 
 
 def handler(meme: Meme) -> T_Handler:
@@ -52,23 +46,18 @@ def handler(meme: Meme) -> T_Handler:
         args: dict = {}
 
         sender = event.payload.sender
-        logger.info(sender.type)
-        logger.info(sender.login)
-        if sender.login.endswith(BOT_MARKER):
+        if sender.type == "Bot":
             logger.info("评论来自机器人，已跳过")
             return
 
-        event_user_info = UserInfo(
-            sender.name if isinstance(sender.name, str) else "",
-            sender.avatar_url,
-        )
+        event_user_info = UserInfo(sender.login, sender.avatar_url)
 
         for text in shlex.split(msg.extract_plain_text()):
             if text.startswith("@") and (name := text[1:]):
                 try:
                     user = await get_user(bot, name)
                     image_urls.append(user.avatar_url)
-                    user_infos.append(UserInfo(user.name or "", user.avatar_url))
+                    user_infos.append(UserInfo(user.login, user.avatar_url))
                 except Exception:
                     logger.warning(traceback.format_exc())
                     texts.append(text)
@@ -144,17 +133,6 @@ def create_matchers():
 
         for matcher in matchers:
             matcher.append_handler(handler(meme))
-
-
-test_matcher = on_message()
-
-
-@test_matcher.handle()
-async def handle_message(
-    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
-):
-    logger.info(event.payload.sender.login)
-    logger.info(event.payload.sender.type)
 
 
 create_matchers()

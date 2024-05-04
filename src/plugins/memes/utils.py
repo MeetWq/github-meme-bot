@@ -13,9 +13,6 @@ from pydantic import BaseModel
 
 from .config import plugin_config
 
-BOT_MARKER = "[bot]"
-"""机器人的名字结尾都会带有这个"""
-
 
 class RepoInfo(BaseModel):
     """仓库信息"""
