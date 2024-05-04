@@ -50,5 +50,5 @@ async def upload_image(image: bytes) -> str:
     files = {"smfile": image}
     async with httpx.AsyncClient() as client:
         resp = await client.post(api, headers=headers, files=files)
-    data = await resp.json()
+    data = resp.json()
     return data["data"]["url"]
