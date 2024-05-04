@@ -7,8 +7,8 @@ from meme_generator.manager import get_memes
 from meme_generator.meme import Meme
 from nonebot import on_message
 from nonebot.adapters.github import (
-    Bot,
     CommitCommentCreated,
+    GitHubBot,
     IssueCommentCreated,
     Message,
     PullRequestReviewCommentCreated,
@@ -16,20 +16,22 @@ from nonebot.adapters.github import (
 from nonebot.drivers import Request
 from nonebot.log import logger
 from nonebot.matcher import Matcher
+from nonebot.params import Depends
 from nonebot.typing import T_Handler, T_State
 
 from .rule import MSG_KEY, TEXTS_KEY, command_rule, regex_rule
-from .utils import creation_reaction, get_user, upload_image
+from .utils import creation_reaction, get_installation_id, get_user, upload_image
 
 
 def handler(meme: Meme) -> T_Handler:
     async def handle(
-        bot: Bot,
+        bot: GitHubBot,
         event: IssueCommentCreated
         | PullRequestReviewCommentCreated
         | CommitCommentCreated,
         matcher: Matcher,
         state: T_State,
+        installation_id: int = Depends(get_installation_id),
     ):
         @dataclass
         class UserInfo:
@@ -109,7 +111,9 @@ def handler(meme: Meme) -> T_Handler:
             await matcher.finish()
 
         url = await upload_image(result.getvalue())
-        await matcher.finish(f"![{meme.keywords[0]}]({url})")
+
+        async with bot.as_installation(installation_id):
+            await matcher.finish(f"![{meme.keywords[0]}]({url})")
 
     return handle
 

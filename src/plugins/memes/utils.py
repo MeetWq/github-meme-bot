@@ -4,11 +4,40 @@ import httpx
 from nonebot.adapters.github import (
     Bot,
     CommitCommentCreated,
+    GitHubBot,
     IssueCommentCreated,
     PullRequestReviewCommentCreated,
 )
+from nonebot.params import Depends
+from pydantic import BaseModel
 
 from .config import plugin_config
+
+
+class RepoInfo(BaseModel):
+    """仓库信息"""
+
+    owner: str
+    repo: str
+
+
+def get_repo_info(
+    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
+) -> RepoInfo:
+    """获取仓库信息"""
+    repo = event.payload.repository
+    return RepoInfo(owner=repo.owner.login, repo=repo.name)
+
+
+async def get_installation_id(
+    bot: GitHubBot,
+    repo_info: RepoInfo = Depends(get_repo_info),
+) -> int:
+    """获取 GitHub App 的 Installation ID"""
+    installation = (
+        await bot.rest.apps.async_get_repo_installation(**repo_info.model_dump())
+    ).parsed_data
+    return installation.id
 
 
 async def creation_reaction(
