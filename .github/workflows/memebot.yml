@@ -13,8 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Run MemeBot
     steps:
+      - name: Cache Docker images
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-${{ runner.os }}-0.0.1
       - name: MemeBot
-        uses: docker://ghcr.io/meetwq/github-meme-bot:main
+        uses: docker://ghcr.io/meetwq/github-meme-bot:0.0.1
         env:
           APP_ID: ${{ secrets.MEME_APP_ID }}
           PRIVATE_KEY: ${{ secrets.MEME_PRIVATE_KEY }}
