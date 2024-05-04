@@ -52,6 +52,12 @@ def handler(meme: Meme) -> T_Handler:
         args: dict = {}
 
         sender = event.payload.sender
+        logger.info(sender.type)
+        logger.info(sender.login)
+        if sender.login.endswith(BOT_MARKER):
+            logger.info("评论来自机器人，已跳过")
+            return
+
         event_user_info = UserInfo(
             sender.name if isinstance(sender.name, str) else "",
             sender.avatar_url,
@@ -124,32 +130,16 @@ def handler(meme: Meme) -> T_Handler:
     return handle
 
 
-def not_bot(
-    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
-) -> bool:
-    return not event.payload.sender.login.endswith(BOT_MARKER)
-
-
 def create_matchers():
     for meme in get_memes():
         matchers: list[type[Matcher]] = []
         if meme.keywords:
             matchers.append(
-                on_message(
-                    command_rule(meme.keywords),
-                    permission=not_bot,
-                    block=False,
-                    priority=1,
-                )
+                on_message(command_rule(meme.keywords), block=False, priority=1)
             )
         if meme.patterns:
             matchers.append(
-                on_message(
-                    regex_rule(meme.patterns),
-                    permission=not_bot,
-                    block=False,
-                    priority=2,
-                )
+                on_message(regex_rule(meme.patterns), block=False, priority=2)
             )
 
         for matcher in matchers:
