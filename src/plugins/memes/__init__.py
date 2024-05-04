@@ -146,4 +146,15 @@ def create_matchers():
             matcher.append_handler(handler(meme))
 
 
+test_matcher = on_message()
+
+
+@test_matcher.handle()
+async def handle_message(
+    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
+):
+    logger.info(event.payload.sender.login)
+    logger.info(event.payload.sender.type)
+
+
 create_matchers()
