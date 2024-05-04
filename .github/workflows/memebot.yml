@@ -13,20 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Run MemeBot
     steps:
-      - name: Restore MemeBot Image Cache if it exists
-        id: cache-docker-meme-bot
-        uses: actions/cache@v4
-        with:
-          path: ci/cache/docker/github-meme-bot
-          key: cache-docker-${{ runner.os }}-github-meme-bot-0.0.2
-
-      - name: Update MemeBot Image Cache if cache miss
-        if: steps.cache-docker-meme-bot.outputs.cache-hit != 'true'
-        run: docker pull ghcr.io/meetwq/github-meme-bot:0.0.2 && mkdir -p ci/cache/docker/github-meme-bot && docker save ghcr.io/meetwq/github-meme-bot:0.0.2 -o ./ci/cache/docker/github-meme-bot/github-meme-bot-0.0.2.tar
-
-      - name: Use MemeBot Image Cache if cache hit
-        if: steps.cache-docker-meme-bot.outputs.cache-hit == 'true'
-        run: docker load -i ./ci/cache/docker/github-meme-bot/github-meme-bot-0.0.2.tar
-
-      - name: Run MemeBot
-        run: docker run ghcr.io/meetwq/github-meme-bot:0.0.2 -e APP_ID=${{ secrets.MEME_APP_ID }} -e PRIVATE_KEY=${{ secrets.MEME_PRIVATE_KEY }} -e SMMS_SECRET_TOKEN=${{ secrets.SMMS_SECRET_TOKEN }}
+      - name: MemeBot
+        uses: docker://ghcr.io/meetwq/github-meme-bot:main
+        env:
+          APP_ID: ${{ secrets.MEME_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.MEME_PRIVATE_KEY }}
+          SMMS_SECRET_TOKEN: ${{ secrets.SMMS_SECRET_TOKEN }}
