@@ -83,7 +83,7 @@ with ensure_cwd(Path(__file__).parent):
     runner_debug = os.environ.get("RUNNER_DEBUG", "0")
 
     nonebot.init(
-        driver="~none",
+        driver="~httpx",
         github_apps=[{"app_id": app_id, "private_key": private_key}],
         log_level="DEBUG" if runner_debug == "1" else "INFO",
     )
