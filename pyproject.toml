@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "github-meme-bot"
-version = "0.0.1"
+version = "0.0.2"
 description = "Make meme in github comments"
 authors = ["meetwq <meetwq@gmail.com>"]
 license = "MIT"
