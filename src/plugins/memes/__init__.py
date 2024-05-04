@@ -137,7 +137,6 @@ def create_matchers():
             matchers.append(
                 on_message(
                     command_rule(meme.keywords),
-                    permission=not_bot,
                     block=False,
                     priority=1,
                 )
@@ -146,7 +145,6 @@ def create_matchers():
             matchers.append(
                 on_message(
                     regex_rule(meme.patterns),
-                    permission=not_bot,
                     block=False,
                     priority=2,
                 )
