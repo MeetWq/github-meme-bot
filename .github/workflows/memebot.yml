@@ -20,4 +20,4 @@ jobs:
         PRIVATE_KEY: ${{ secrets.MEME_PRIVATE_KEY }}
         SMMS_SECRET_TOKEN: ${{ secrets.SMMS_SECRET_TOKEN }}
     steps:
-      - run: python /app/bot.py
+      - run: /app/start_memebot.sh
