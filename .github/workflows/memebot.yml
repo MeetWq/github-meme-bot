@@ -20,7 +20,4 @@ jobs:
         PRIVATE_KEY: ${{ secrets.MEME_PRIVATE_KEY }}
         SMMS_SECRET_TOKEN: ${{ secrets.SMMS_SECRET_TOKEN }}
     steps:
-      - run: |
-          echo A comment on issue $NUMBER
-        env:
-          NUMBER: ${{ github.event.issue.number }}
+      - run: python /app/bot.py
