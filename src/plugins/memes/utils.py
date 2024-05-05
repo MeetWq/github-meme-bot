@@ -2,47 +2,36 @@ from typing import Literal
 
 import httpx
 from nonebot.adapters.github import (
-    Bot,
     CommitCommentCreated,
     GitHubBot,
     IssueCommentCreated,
     PullRequestReviewCommentCreated,
 )
-from nonebot.params import Depends
-from pydantic import BaseModel
 
 from .config import plugin_config
 
-
-class RepoInfo(BaseModel):
-    """仓库信息"""
-
-    owner: str
-    repo: str
-
-
-def get_repo_info(
-    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
-) -> RepoInfo:
-    """获取仓库信息"""
-    repo = event.payload.repository
-    return RepoInfo(owner=repo.owner.login, repo=repo.name)
+CommentEvent = (
+    IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated
+)
 
 
 async def get_installation_id(
     bot: GitHubBot,
-    repo_info: RepoInfo = Depends(get_repo_info),
+    event: CommentEvent,
 ) -> int:
     """获取 GitHub App 的 Installation ID"""
+    repo = event.payload.repository
     installation = (
-        await bot.rest.apps.async_get_repo_installation(**repo_info.model_dump())
+        await bot.rest.apps.async_get_repo_installation(
+            owner=repo.owner.login, repo=repo.name
+        )
     ).parsed_data
     return installation.id
 
 
 async def creation_reaction(
-    bot: Bot,
-    event: IssueCommentCreated | PullRequestReviewCommentCreated | CommitCommentCreated,
+    bot: GitHubBot,
+    event: CommentEvent,
     content: Literal[
         "+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"
     ],
@@ -61,15 +50,16 @@ async def creation_reaction(
             f"Cannot creation reaction for event type {event.__class__.__name__}"
         )
 
+    repo = event.payload.repository
     await func(
-        owner=event.payload.repository.owner.login,
-        repo=event.payload.repository.name,
+        owner=repo.owner.login,
+        repo=repo.name,
         comment_id=event.payload.comment.id,
         data={"content": content},
     )
 
 
-async def get_user(bot: Bot, username: str):
+async def get_user(bot: GitHubBot, username: str):
     return (await bot.rest.users.async_get_by_username(username=username)).parsed_data
 
 
