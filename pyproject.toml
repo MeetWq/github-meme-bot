@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "github-meme-bot"
-version = "0.0.2"
+version = "0.0.3"
 description = "Make meme in github comments"
 authors = ["meetwq <meetwq@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,8 @@ repository = "https://github.com/MeetWq/github-meme-bot"
 python = "^3.10"
 nonebot2 = "^2.3.0"
 nonebot-adapter-github = "^0.4.1"
-meme-generator = ">=0.0.15,<0.1.0"
+nonebot-plugin-alconna = ">=0.45.1,<1.0.0"
+meme-generator = "^0.1.0"
 httpx = ">=0.20.0,<1.0.0"
 
 [tool.ruff]

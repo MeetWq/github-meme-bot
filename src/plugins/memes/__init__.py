@@ -2,19 +2,20 @@ import re
 import shlex
 import traceback
 from dataclasses import dataclass
+from typing import Any
 
-from meme_generator.exception import ArgParserExit, MemeGeneratorException
+from arclet.alconna import config as alc_config
+from meme_generator.exception import MemeGeneratorException
 from meme_generator.manager import get_memes
 from meme_generator.meme import Meme
-from nonebot import on_message
-from nonebot.adapters.github import GitHubBot, Message
+from nonebot.adapters.github import GitHubBot
 from nonebot.drivers import Request
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.params import Depends
-from nonebot.typing import T_Handler, T_State
+from nonebot.utils import run_sync
+from nonebot_plugin_alconna import AlcMatches, Alconna, Args, MultiVar, Text, on_alconna
 
-from .rule import MSG_KEY, TEXTS_KEY, command_rule, regex_rule
 from .utils import (
     CommentEvent,
     creation_reaction,
@@ -23,36 +24,73 @@ from .utils import (
     upload_image,
 )
 
+alc_config.command_max_count = 1000
 
-def handler(meme: Meme) -> T_Handler:
-    async def handle(
+meme_params_key = "meme_params"
+arg_meme_params = Args[meme_params_key, MultiVar(Text, "*")]
+
+
+def create_matcher(meme: Meme):
+    options = [
+        opt.option()
+        for opt in (
+            meme.params_type.args_type.parser_options
+            if meme.params_type.args_type
+            else []
+        )
+    ]
+    meme_matcher = on_alconna(
+        Alconna(meme.keywords[0], *options, arg_meme_params),
+        aliases=set(meme.keywords[1:]),
+        block=False,
+        use_cmd_start=True,
+    )
+    for shortcut in meme.shortcuts:
+        meme_matcher.shortcut(
+            shortcut.key,
+            arguments=shortcut.args,
+            prefix=True,
+            humanized=shortcut.humanized,
+        )
+
+    @meme_matcher.handle()
+    async def _(
         bot: GitHubBot,
         event: CommentEvent,
         matcher: Matcher,
-        state: T_State,
+        alc_matches: AlcMatches,
         installation_id: int = Depends(get_installation_id),
     ):
-        @dataclass
-        class UserInfo:
-            name: str
-            avatar_url: str
-
-        msg: Message = state[MSG_KEY]
-        texts: list[str] = []
-        images: list[bytes] = []
-        image_urls: list[str] = []
-        user_infos: list[UserInfo] = []
-        args: dict = {}
-
         sender = event.payload.sender
         if sender.type == "Bot":
             logger.info("评论来自机器人，已跳过")
             return
 
+        @dataclass
+        class UserInfo:
+            name: str
+            avatar_url: str
+
+        texts: list[str] = []
+        images: list[bytes] = []
+        image_urls: list[str] = []
+        user_infos: list[UserInfo] = []
+
+        args: dict[str, Any] = {}
+        options = alc_matches.options
+        for option, option_result in options.items():
+            if option_result.value is None:
+                args.update(option_result.args)
+            else:
+                args[option] = option_result.value
+
+        meme_params: tuple[Text, ...] = alc_matches.query(meme_params_key, (Text(""),))
+        raw_text = " ".join(param.text for param in meme_params)
+
         event_user_info = UserInfo(sender.login, sender.avatar_url)
 
         async with bot.as_installation(installation_id):
-            for text in shlex.split(msg.extract_plain_text()):
+            for text in shlex.split(raw_text):
                 if text.startswith("@") and (name := text[1:]):
                     try:
                         user = await get_user(bot, name)
@@ -92,17 +130,7 @@ def handler(meme: Meme) -> T_Handler:
                 image_urls.insert(0, event_user_info.avatar_url)
                 user_infos.insert(0, event_user_info)
 
-            texts = state.get(TEXTS_KEY, []) + texts
-
-            if meme.params_type.args_type:
-                try:
-                    parse_result = meme.parse_args(texts)
-                except ArgParserExit:
-                    logger.warning(traceback.format_exc())
-                    await matcher.finish()
-                texts = parse_result["texts"]
-                parse_result.pop("texts")
-                args = parse_result
+            args["user_infos"] = [{"name": user_info.name} for user_info in user_infos]
 
             if not (
                 meme.params_type.min_images
@@ -121,10 +149,8 @@ def handler(meme: Meme) -> T_Handler:
                 assert isinstance(resp.content, bytes)
                 images.append(resp.content)
 
-            args["user_infos"] = [{"name": user_info.name} for user_info in user_infos]
-
             try:
-                result = await meme(images=images, texts=texts, args=args)
+                result = await run_sync(meme)(images=images, texts=texts, args=args)
             except MemeGeneratorException:
                 logger.warning(traceback.format_exc())
                 await creation_reaction(bot, event, "confused")
@@ -133,23 +159,10 @@ def handler(meme: Meme) -> T_Handler:
             url = await upload_image(result.getvalue())
             await matcher.finish(f"![{meme.keywords[0]}]({url})")
 
-    return handle
-
 
 def create_matchers():
     for meme in get_memes():
-        matchers: list[type[Matcher]] = []
-        if meme.keywords:
-            matchers.append(
-                on_message(command_rule(meme.keywords), block=False, priority=1)
-            )
-        if meme.patterns:
-            matchers.append(
-                on_message(regex_rule(meme.patterns), block=False, priority=2)
-            )
-
-        for matcher in matchers:
-            matcher.append_handler(handler(meme))
+        create_matcher(meme)
 
 
 create_matchers()
