@@ -1,5 +1,4 @@
 import re
-import shlex
 import traceback
 from dataclasses import dataclass
 from typing import Any
@@ -84,13 +83,13 @@ def create_matcher(meme: Meme):
             else:
                 args[option] = option_result.value
 
-        meme_params: tuple[Text, ...] = alc_matches.query(meme_params_key, (Text(""),))
-        raw_text = " ".join(param.text for param in meme_params)
+        meme_params: list[Text] = list(alc_matches.query(meme_params_key, ()))
 
         event_user_info = UserInfo(sender.login, sender.avatar_url)
 
         async with bot.as_installation(installation_id):
-            for text in shlex.split(raw_text):
+            for param in meme_params:
+                text = param.text
                 if text.startswith("@") and (name := text[1:]):
                     try:
                         user = await get_user(bot, name)
