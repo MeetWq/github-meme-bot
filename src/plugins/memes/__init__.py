@@ -7,12 +7,16 @@ from arclet.alconna import config as alc_config
 from meme_generator.exception import MemeGeneratorException
 from meme_generator.manager import get_memes
 from meme_generator.meme import Meme
+from nonebot import require
 from nonebot.adapters.github import GitHubBot
 from nonebot.drivers import Request
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.params import Depends
 from nonebot.utils import run_sync
+
+require("nonebot_plugin_alconna")
+
 from nonebot_plugin_alconna import AlcMatches, Alconna, Args, MultiVar, Text, on_alconna
 
 from .utils import (
@@ -23,7 +27,7 @@ from .utils import (
     upload_image,
 )
 
-alc_config.command_max_count = 1000
+alc_config.command_max_count += 1000
 
 meme_params_key = "meme_params"
 arg_meme_params = Args[meme_params_key, MultiVar(Text, "*")]
@@ -41,7 +45,7 @@ def create_matcher(meme: Meme):
     meme_matcher = on_alconna(
         Alconna(meme.keywords[0], *options, arg_meme_params),
         aliases=set(meme.keywords[1:]),
-        block=False,
+        block=True,
         use_cmd_start=True,
     )
     for shortcut in meme.shortcuts:
@@ -139,8 +143,8 @@ def create_matcher(meme: Meme):
                 meme.params_type.min_texts <= len(texts) <= meme.params_type.max_texts
             ):
                 logger.warning("图片数量或文字数量不符")
+                await creation_reaction(bot, event, "confused")
                 await matcher.finish()
-            matcher.stop_propagation()
 
             for image_url in image_urls:
                 resp = await bot.adapter.request(Request("GET", image_url))
